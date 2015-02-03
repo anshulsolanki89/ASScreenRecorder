@@ -30,7 +30,7 @@
             [self playEndSound];
         }];
     } else {
-        [recorder startRecording];
+        [recorder startRecording:self.view];
         NSLog(@"Start recording");
         [self playStartSound];
     }

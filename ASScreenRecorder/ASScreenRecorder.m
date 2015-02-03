@@ -33,6 +33,8 @@
     
     CGColorSpaceRef _rgbColorSpace;
     CVPixelBufferPoolRef _outputBufferPool;
+    
+    UIView *targetView;
 }
 
 #pragma mark - initializers
@@ -75,8 +77,9 @@
     _videoURL = videoURL;
 }
 
-- (BOOL)startRecording
+- (BOOL)startRecording:(UIView *)view
 {
+    targetView = view;
     if (!_isRecording) {
         [self setUpWriter];
         _isRecording = (_videoWriter.status == AVAssetWriterStatusWriting);
@@ -103,9 +106,9 @@
     
     NSDictionary *bufferAttributes = @{(id)kCVPixelBufferPixelFormatTypeKey : @(kCVPixelFormatType_32BGRA),
                                        (id)kCVPixelBufferCGBitmapContextCompatibilityKey : @YES,
-                                       (id)kCVPixelBufferWidthKey : @(_viewSize.width * _scale),
-                                       (id)kCVPixelBufferHeightKey : @(_viewSize.height * _scale),
-                                       (id)kCVPixelBufferBytesPerRowAlignmentKey : @(_viewSize.width * _scale * 4)
+                                       (id)kCVPixelBufferWidthKey : @(targetView.frame.size.width * _scale),
+                                       (id)kCVPixelBufferHeightKey : @(targetView.frame.size.height * _scale),
+                                       (id)kCVPixelBufferBytesPerRowAlignmentKey : @(targetView.frame.size.width * _scale * 4)
                                        };
     
     _outputBufferPool = NULL;
@@ -118,12 +121,12 @@
                                                 error:&error];
     NSParameterAssert(_videoWriter);
     
-    NSInteger pixelNumber = _viewSize.width * _viewSize.height * _scale;
+    NSInteger pixelNumber = targetView.frame.size.width * targetView.frame.size.height * _scale;
     NSDictionary* videoCompression = @{AVVideoAverageBitRateKey: @(pixelNumber * 11.4)};
     
     NSDictionary* videoSettings = @{AVVideoCodecKey: AVVideoCodecH264,
-                                    AVVideoWidthKey: [NSNumber numberWithInt:_viewSize.width*_scale],
-                                    AVVideoHeightKey: [NSNumber numberWithInt:_viewSize.height*_scale],
+                                    AVVideoWidthKey: [NSNumber numberWithInt:targetView.frame.size.width*_scale],
+                                    AVVideoHeightKey: [NSNumber numberWithInt:targetView.frame.size.height*_scale],
                                     AVVideoCompressionPropertiesKey: videoCompression};
     
     _videoWriterInput = [AVAssetWriterInput assetWriterInputWithMediaType:AVMediaTypeVideo outputSettings:videoSettings];
@@ -247,9 +250,7 @@
         // FIX: UIKeyboard is currently only rendered correctly in portrait orientation
         dispatch_sync(dispatch_get_main_queue(), ^{
             UIGraphicsPushContext(bitmapContext); {
-                for (UIWindow *window in [[UIApplication sharedApplication] windows]) {
-                    [window drawViewHierarchyInRect:CGRectMake(0, 0, _viewSize.width, _viewSize.height) afterScreenUpdates:NO];
-                }
+                [targetView drawViewHierarchyInRect:CGRectMake(0, 0, targetView.frame.size.width, targetView.frame.size.height) afterScreenUpdates:NO];
             } UIGraphicsPopContext();
         });
         
@@ -292,7 +293,7 @@
                                           kCGBitmapByteOrder32Little | kCGImageAlphaPremultipliedFirst
                                           );
     CGContextScaleCTM(bitmapContext, _scale, _scale);
-    CGAffineTransform flipVertical = CGAffineTransformMake(1, 0, 0, -1, 0, _viewSize.height);
+    CGAffineTransform flipVertical = CGAffineTransformMake(1, 0, 0, -1, 0, targetView.frame.size.height);
     CGContextConcatCTM(bitmapContext, flipVertical);
     
     return bitmapContext;

@@ -1,4 +1,4 @@
-Update 02/02/2015
+Updated 02/02/2015
 ========
 
 record a view instead of the whole window
